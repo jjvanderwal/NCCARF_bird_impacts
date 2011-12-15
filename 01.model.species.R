@@ -21,13 +21,29 @@ write.csv(out,'target_group_bkgd.csv',row.names=FALSE); rm(out) #write out the f
 
 ### cycle through each of the species
 for (spp in species) { cat(spp,'... ') #cycle through each of the species
-	occur = fetch(dbSendQuery(conn, statement=paste("
-		SELECT surveyID, col
-		FROM observations 
-		WHERE SpNo=",spp,"
-		GROUP BY surveyID, col;
-		",sep='')),n=-1) #get the occurrence data
-	if (length(occur)<1) { #if no occurrences... move to next species
+	tquery = paste("SELECT rawdata.surveyID, IF( ISNULL(rating), IF( RI=3 OR PA=3, 3, IF( RI=2 OR PA=2, 2, 1 ) ), rating ) as col ",
+		"FROM ( ",
+			"SELECT Latitude, Longitude, surveys.surveyID, MAX(OBS.rating) as RI, IF( MIN(Positional_Accuracy) < 20001 AND Year < 2013 AND Year > 1949, 1, IF( MIN(Positional_Accuracy) < 50001, 2, 3 ) ) as PA ",
+			"FROM surveys ",
+			"JOIN ( ",
+				"SELECT surveyID, IF( rating < 2, 1, IF( rating = 3, 3, 2 ) ) as rating ",
+				"FROM observations ",
+				"WHERE SpNo = ",spp," ",
+				"GROUP BY surveyID ",
+			") as OBS ",
+			"ON surveys.surveyID = OBS.surveyID ",
+			"GROUP BY surveyID ",
+		") as rawdata ",
+		"LEFT JOIN ( ",
+			"SELECT Latitude, Longitude, ROUND(AVG(rating)) as rating ",
+			"FROM feedback ",
+			"WHERE feedback.SpNo = ",spp," ",
+			"GROUP BY Latitude, Longitude ",
+		") as userdata ",
+		"ON ROUND(userdata.Latitude,8)=ROUND(rawdata.Latitude,8) AND ROUND(userdata.Longitude,8)=ROUND(rawdata.Longitude,8);",sep='')
+	occur = fetch(dbSendQuery(conn, statement=tquery),n=-1) #get the occurrence data
+	occur = occur[which(occur$col==1),] #keep only good data
+	if (nrow(occur)<1) { #if no occurrences... move to next species
 		cat('No data ... nothing to run \n')
 	} else { #run this as long as there are occurrences
 		occur = merge(occur,bkgd) #merge with bkgd data
