@@ -5,7 +5,6 @@
 library(RMySQL); library(SDMTools) #load the necessary libraries
 wd = '~/working/NARP_birds/'; setwd(wd) #define and set the working directory
 climate.dir = '~/Climate/PCMDI/01.Oz.5km.61.90/bioclim/1975/' #define the climate directory
-current.mxe.dir = '~/Climate/PCMDI/01.Oz.5km.61.90/mxe/1975/' #define the mxe directory for current climate to get map of predicted distribution
 
 ### extract species and background data from the database
 conn = dbConnect("MySQL",host='spatialecology.jcu.edu.au',dbname='BirdsAustralia',username='mapusr',password='mapusr') #define the connection to the database
@@ -29,15 +28,18 @@ occur = unique(occur[,c('lat','lon','TID','subspp','rnge_t','brRnge_t')]) #only 
 for (clim.var in clim.vars) { cat(clim.var,'\n') #cycle through each of hte climate variables
 	occur[,clim.var] = extract.data(cbind(occur$lon,occur$lat), read.asc.gz(paste(climate.dir,clim.var,'.asc.gz',sep=''))) #append the climate data
 }
+occur = na.omit(occur) #remove NA data
 
 
 for (spp in unique(occur$TID)) { cat(spp,'\n') #cycle through each of the species
 	tdata = occur[which(occur$TID==spp),] #get the subset that has the species of interest
 	out = data.frame(spp = paste(spp,'FULL',sep='_'),tdata[,c('lon','lat',clim.vars)]) #create the FUll species model
 	out = rbind(out,data.frame(spp = paste(spp,'core',sep='_'),tdata[which(tdata$rnge_t=='core'),c('lon','lat',clim.vars)])) #get the core of the species
-	if (length(grep("historic",tdata$rnge_t))) out = rbind(out,data.frame(spp = paste(spp,'core',"historic",sep='_'),tdata[which(tdata$rnge_t %in% c('core',"historic")),c('lon','lat',clim.vars)])) #add historic info
-	if (length(grep("irruptive",tdata$rnge_t))) out = rbind(out,data.frame(spp = paste(spp,"irruptive",sep='_'),tdata[which(tdata$rnge_t=="irruptive"),c('lon','lat',clim.vars)])) #add introduced info
-	if (length(grep("introduced",tdata$rnge_t))) out = rbind(out,data.frame(spp = paste(spp,"introduced",sep='_'),tdata[which(tdata$rnge_t=="introduced"),c('lon','lat',clim.vars)])) #add irruptive info
+	if (length(grep("historic",tdata$rnge_t))>0) out = rbind(out,data.frame(spp = paste(spp,'core',"historic",sep='_'),tdata[which(tdata$rnge_t %in% c('core',"historic")),c('lon','lat',clim.vars)])) #add historic info
+	if (length(grep("irruptive",tdata$rnge_t))>0) out = rbind(out,data.frame(spp = paste(spp,"irruptive",sep='_'),tdata[which(tdata$rnge_t=="irruptive"),c('lon','lat',clim.vars)])) #add introduced info
+	if (length(grep("introduced",tdata$rnge_t))>0) out = rbind(out,data.frame(spp = paste(spp,"introduced",sep='_'),tdata[which(tdata$rnge_t=="introduced"),c('lon','lat',clim.vars)])) #add irruptive info
+	if (length(which(tdata$brRnge_t=='b'))>0) out = rbind(out,data.frame(spp = paste(spp,'breed',sep='_'),tdata[which(tdata$brRnge_t=='b'),c('lon','lat',clim.vars)])) #append the breeding range
+	if (length(which(tdata$brRnge_t=='nb'))>0) out = rbind(out,data.frame(spp = paste(spp,'nonbreed',sep='_'),tdata[which(tdata$brRnge_t=='nb'),c('lon','lat',clim.vars)])) #append the breeding range
 	for (subspp in unique(tdata$subspp)) { # cycle through each of the subspecies
 		if (nchar(subspp)>0) {
 			rois = which(tdata$subspp==subspp & tdata$rnge_t=='core') #define rows of interest that are core for the subspecies
@@ -57,7 +59,19 @@ for (spp in unique(occur$TID)) { cat(spp,'\n') #cycle through each of the specie
 	
 	}
 	out$spp = as.character(out$spp) #convert from factor to character
-	print(unique(out$spp))
+
+	spp.dir = paste(wd,'models/',spp,'/',sep='') #define the species directory
+	dir.create(paste(spp.dir,'output',sep=''),recursive=TRUE) #create the species directory
+	write.csv(out,paste(spp.dir,'occur.csv',sep=''),row.names=FALSE) #write out the file and remove it from memory
+	zz = file(paste(spp.dir,'01.create.model.sh',sep=''),'w') #create the shell script to run the maxent model
+		cat('#!/bin/bash\n',file=zz)
+		cat('cd $PBS_O_WORKDIR\n',file=zz)
+		cat('module load java\n',file=zz)
+		cat('java -mx1024m -jar ',wd,'maxent.jar -e ',wd,'target_group_bkgd.csv -s occur.csv -o output nothreshold nowarnings novisible replicates=10 nooutputgrids -r -a \n',sep="",file=zz)
+		cat('cp -af output/maxentResults.csv output/maxentResults.crossvalide.csv\n',file=zz)
+		cat('java -mx1024m -jar ',wd,'maxent.jar -e ',wd,'target_group_bkgd.csv -s occur.csv -o output nothreshold nowarnings novisible nowriteclampgrid nowritemess writeplotdata -P -J -r -a \n',sep="",file=zz)
+	close(zz) 
+	setwd(spp.dir); system(paste('qsub -m n -N ',spp,' 01.create.model.sh',sep='')); setwd(wd) #submit the script			
 }
 
 
