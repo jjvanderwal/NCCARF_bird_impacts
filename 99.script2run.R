@@ -22,39 +22,46 @@ subspecies = list.files('output/ascii') #get a list of subspecies
 for (subspp in subspecies) {cat(subspp,'\n') #cycle through each of the subspecies
 	dir.create(paste('summary/',subspp,sep=''),recursive=TRUE)
 	threshold = maxentResults$Balance.training.omission..predicted.area.and.threshold.value.logistic.threshold[which(maxentResults$Species==subspp)] #define the species threshold
-	asciis = list.files(paste('output/ascii/',subspp,'/',sep=''),pattern='asc.gz') #get a list of the asci file
-	mat = matrix(NA,nr=nrow(pos),nc=length(asciis)); colnames(mat) = gsub('.asc.gz','',asciis) #create a matrix for storing the data
-	for (asc in asciis) { cat('.') #read in all the data
-		mat[,gsub('.asc.gz','',asc)] = read.asc.gz(paste('output/ascii/',subspp,'/',asc,sep=''))[cbind(pos$row,pos$col)] #append the data
-	}; cat('    data read in\n')
-	save(mat,file=paste('summary/',subspp,'/potential_distribution_matrix.RData',sep='')) #write out the data
-	mat[which(mat<threshold)] = 0 #threshold the mat
-	binmat = mat; binmat[which(binmat>0)] = 1 #create a binary matrix
-	outarea = data.frame(run=colnames(mat),area.km2 = colSums(binmat[,] * pos$area)) #summarize the area change
+	if (!file.exists(paste('summary/',subspp,'/potential_distribution_matrix.RData',sep=''))) { #check if the file already exists
+		asciis = list.files(paste('output/ascii/',subspp,'/',sep=''),pattern='asc.gz') #get a list of the asci file
+		mat = matrix(NA,nr=nrow(pos),nc=length(asciis)); colnames(mat) = gsub('.asc.gz','',asciis) #create a matrix for storing the data
+		for (asc in asciis) { cat('.') #read in all the data
+			mat[,gsub('.asc.gz','',asc)] = read.asc.gz(paste('output/ascii/',subspp,'/',asc,sep=''))[cbind(pos$row,pos$col)] #append the data
+		}; cat('    data read in\n')
+		save(mat,file=paste('summary/',subspp,'/potential_distribution_matrix.RData',sep='')) #write out the data
+	} else {
+		load(paste('summary/',subspp,'/potential_distribution_matrix.RData',sep='')) #load the data if it does not exist
+	}
 	curasc = baseasc; curasc[cbind(pos$row,pos$col)] = mat[,'1975'] #get out the current suitability
 	write.asc.gz(curasc,paste('summary/',subspp,'/current.suitability.asc',sep='')) #write out the data
-	a1basc = baseasc; a1basc[cbind(pos$row,pos$col)] = rowMeans(binmat[,grep('sresa1b',colnames(mat))]) #get out the current suitability
-	write.asc.gz(a1basc,paste('summary/',subspp,'/sresa1b.2080.certainty.asc',sep='')) #write out the data
-	a2asc = baseasc; a2asc[cbind(pos$row,pos$col)] = rowMeans(binmat[,grep('sresa2',colnames(mat))]) #get out the current suitability
-	write.asc.gz(a2asc,paste('summary/',subspp,'/sresa2.2080.certainty.asc',sep='')) #write out the data
-	b1asc = baseasc; b1asc[cbind(pos$row,pos$col)] = rowMeans(binmat[,grep('sresb1',colnames(mat))]) #get out the current suitability
-	write.asc.gz(b1asc,paste('summary/',subspp,'/sresb1.2080.certainty.asc',sep='')) #write out the data
+	
+	a1basc = baseasc; a1basc[cbind(pos$row,pos$col)] = apply(mat[,grep('sresa1b',colnames(mat))],1,function(x) { quantile(x,0.5,type=8) } )	#get out the current suitability
+	a1basc[which(a1basc<threshold)] = 0; write.asc.gz(a1basc,paste('summary/',subspp,'/sresa1b.2080.median.asc',sep='')) #write out the data
+	
+	a2asc = baseasc; a2asc[cbind(pos$row,pos$col)] = apply(mat[,grep('sresa2',colnames(mat))],1,function(x) { quantile(x,0.5,type=8) } ) #get out the current suitability
+	a2asc[which(a1basc<threshold)] = 0; write.asc.gz(a2asc,paste('summary/',subspp,'/sresa2.2080.median.asc',sep='')) #write out the data
+	
+	b1asc = baseasc; b1asc[cbind(pos$row,pos$col)] = apply(mat[,grep('sresb1',colnames(mat))],1,function(x) { quantile(x,0.5,type=8) } ) #get out the current suitability
+	b1asc[which(a1basc<threshold)] = 0; write.asc.gz(b1asc,paste('summary/',subspp,'/sresb1.2080.median.asc',sep='')) #write out the data
 
+	# mat[which(mat<threshold)] = 0 #threshold the mat
+	# binmat = mat; binmat[which(binmat>0)] = 1 #create a binary matrix
+	# outarea = data.frame(run=colnames(mat),area.km2 = colSums(binmat[,] * pos$area)) #summarize the area change
+	
 	bins = seq(0,1,length=101); bins = cut(threshold,bins,labels=FALSE) # get the threshold bin for cols
 	col.suit = c(rep('gray',bins),colorRampPalette(c('brown','yellow','forestgreen'))(100)[bins:100]) #define the colors for plots
-	col.certain = colorRampPalette(c('brown','yellow','forestgreen'))(101) #define the colors for plots
+	#col.certain = colorRampPalette(c('brown','yellow','forestgreen'))(101) #define the colors for plots
 	legend.pnts = cbind(c(113,114.5,114.5,113),c(-44,-44,-38,-38)) #define the location of the legend
-	bitmap(paste('summary/',subspp,'.png',sep=''), width=(4*dim(curasc)[1])/100, height=dim(curasc)[2]/100, units='cm', res=300, pointsize=5, bg='white')
+	bitmap(paste('summary/',subspp,'_median.png',sep=''), width=(4*dim(curasc)[1])/100, height=dim(curasc)[2]/100, units='cm', res=300, pointsize=5, bg='white')
 		par(mfrow=c(1,4),mar=c(0,0,0,0),cex=0.6)
 		image(curasc,zlim=c(0,1),col=col.suit,ann=FALSE,axes=FALSE)
 		legend('topleft',legend=paste(subspp,'\nCurrent -- 1975'),bty='n',cex=2)
 		legend.gradient(legend.pnts,cols=col.suit,cex=2,title='suitability',font=2)
-		image(b1asc,zlim=c(0,1),col=col.certain,ann=FALSE,axes=FALSE)
+		image(b1asc,zlim=c(0,1),col=col.suit,ann=FALSE,axes=FALSE)
 		legend('topleft',legend='2080 SRES B1\nLow emmisions',bty='n',cex=2)
-		legend.gradient(legend.pnts,cols=col.certain,cex=2,title='Certainty (prop GCMs agree)',font=2)
-		image(a1basc,zlim=c(0,1),col=col.certain,ann=FALSE,axes=FALSE)
+		image(a1basc,zlim=c(0,1),col=col.suit,ann=FALSE,axes=FALSE)
 		legend('topleft',legend='2080 SRES A1B\n"business as usual"',bty='n',cex=2)
-		image(a2asc,zlim=c(0,1),col=col.certain,ann=FALSE,axes=FALSE)
+		image(a2asc,zlim=c(0,1),col=col.suit,ann=FALSE,axes=FALSE)
 		legend('topleft',legend='2080 SRES A2\nHigh emmisions',bty='n',cex=2)
 	dev.off()
 }
