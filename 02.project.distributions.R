@@ -4,13 +4,13 @@
 ################################################################################
 #define directories
 work.dir = '~/working/NARP_birds/models/'
-mxe.dir = '~/Climate/PCMDI/01.Oz.5km.61.90/mxe/'
+mxe.dir = '~/Climate/CIAS/Australia/5km/bioclim_mxe/'
 maxent.jar = "~/working/NARP_birds/maxent.jar"
 
 ################################################################################
 #list the projections, cycle thorugh them and project the models onto them
 proj.list = list.files(mxe.dir) #list the projections
-proj.list = c('1975',proj.list[grep('2080',proj.list)]) #subset it to simply current and 2080 data
+proj.list = c('1975',proj.list[grep('2085',proj.list)]) #subset it to simply current and 2080 data
 
 species = list.files(work.dir) #get a list of species
 
