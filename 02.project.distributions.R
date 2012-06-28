@@ -10,7 +10,7 @@ maxent.jar = "~/working/NARP_birds/maxent.jar"
 ################################################################################
 #list the projections, cycle thorugh them and project the models onto them
 proj.list = list.files(mxe.dir) #list the projections
-proj.list = c('1975',proj.list[grep('2085',proj.list)]) #subset it to simply current and 2080 data
+proj.list = c('1990',proj.list[grep('2085',proj.list)]) #subset it to simply current and 2080 data
 
 species = list.files(work.dir) #get a list of species
 
