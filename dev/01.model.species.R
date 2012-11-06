@@ -19,7 +19,7 @@ spp.oi = c("355","370","435","u242e","u253a","u25b","u261b","u281a","u282e","u29
 	"u558e","u565a","u565a_nb","u565a_br&nb","u591a","u605a","u606a","u611","u612a","u614a","u615","u648a",
 	"u660","u672c","u677b","u678","u679a","u685","u686","u694f","u779a","u834","u946") #define the species here of interest
 
-wd = '/tmp/jc165798/'; dir.create(wd,recursive=TRUE); setwd(wd) #define and set theworking directory on the local node
+wd = '/fast/jc165798/'; dir.create(wd,recursive=TRUE); setwd(wd) #define and set theworking directory on the local node
 mxe.dir = paste(wd,'Climate/bioclim_mxe/',sep=''); dir.create(mxe.dir,recursive=TRUE) #define the projections directory
 current.dir = paste(wd,'Climate/current.76to05/',sep=''); dir.create(current.dir,recursive=TRUE) #define the current climate directory
 if (!file.exists(paste(wd,'Climate/current.76to05/bioclim_01.asc.gz',sep=''))) { #copy the necessary files if they do not exist
@@ -68,8 +68,7 @@ occur$ClimID = gsub('br&nb','br_nb',occur$ClimID) #replace the damn &
 SpNos = unique(occur$ClimID) #get the unique species numbers
 
 ### try new way with library(parallels)
-library(parallel) #load the parallel library
-system(paste('gzip -d ',current.dir,'*',sep=''))
+system(paste('gzip -d ',current.dir,'*',sep='')) #prep the current climate data
 
 model.spp = function(x,occur,wd,current.dir,mxe.dir) { #define the function to model the species and create the projections
 	SpNo = x #get the spp id
@@ -77,26 +76,43 @@ model.spp = function(x,occur,wd,current.dir,mxe.dir) { #define the function to m
 	spp.dir = paste(wd,'models/',SpNo,'/',sep='') #define the species directory
 	dir.create(paste(spp.dir,'output',sep=''),recursive=TRUE) #create the species directory
 	write.csv(toccur,paste(spp.dir,'occur.csv',sep=''),row.names=FALSE) #write out the file and remove it from memory
-	###do the maxent modelling
-	system(paste('java -mx2048m -jar ',wd,'maxent.jar -e ',wd,'target_group_bkgd.csv -s ',spp.dir,'occur.csv -o ',spp.dir,'output nothreshold nowarnings novisible replicates=10 nooutputgrids -r -a',sep=""))
-	system(paste('cp -af ',spp.dir,'output/maxentResults.csv ',spp.dir,'output/maxentResults.crossvalide.csv',sep=''))
-	system(paste('java -mx2048m -jar ',wd,'maxent.jar -e ',wd,'target_group_bkgd.csv -s ',spp.dir,'occur.csv -o ',spp.dir,'output nothreshold nowarnings novisible nowriteclampgrid nowritemess writeplotdata -P -J -r -a',sep=""))
-	###do the projecting
-	proj.list = list.files(mxe.dir) #list the projections
-	dir.create(paste(spp.dir,'output/ascii/',sep=''),recursive=TRUE) #create the output directory for all maps
-	for (tproj in proj.list) { #cycle through the projections
-		system(paste('java -mx1024m -cp ',wd,'maxent.jar density.Project ',spp.dir,'output/',SpNo,'.lambdas ',mxe.dir,tproj,' ',spp.dir,'output/ascii/',tproj,'.asc fadebyclamping nowriteclampgrid\n',sep=""))
-	}
-	system(paste('java -mx1024m -cp ',wd,'maxent.jar density.Project ',spp.dir,'output/',SpNo,'.lambdas ',current.dir,' ',spp.dir,'output/ascii/1990.asc fadebyclamping nowriteclampgrid\n',sep=""))
-	system(paste('gzip ',spp.dir,'output/ascii/*asc\n',sep=''))
+	
+	zz = file(paste(spp.dir,'01.create.model.sh',sep=''),'w') #create the shell script to run the maxent model
+		cat('#!/bin/bash\n',file=zz)
+		cat('cd ',spp.dir,'\n',sep='',file=zz)
+		cat('module load java\n\n',file=zz)
+		
+		###do the maxent modelling
+		cat('java -mx2048m -jar ',wd,'maxent.jar -e ',wd,'target_group_bkgd.csv -s ',spp.dir,'occur.csv -o ',spp.dir,'output nothreshold nowarnings novisible replicates=10 nooutputgrids -r -a',sep="",file=zz)
+		cat('cp -af ',spp.dir,'output/maxentResults.csv ',spp.dir,'output/maxentResults.crossvalide.csv',sep='',file=zz)
+		cat('java -mx2048m -jar ',wd,'maxent.jar -e ',wd,'target_group_bkgd.csv -s ',spp.dir,'occur.csv -o ',spp.dir,'output nothreshold nowarnings novisible nowriteclampgrid nowritemess writeplotdata -P -J -r -a',sep="",file=zz)
+		###do the projecting
+		proj.list = list.files(mxe.dir) #list the projections
+		dir.create(paste(spp.dir,'output/ascii/',sep=''),recursive=TRUE) #create the output directory for all maps
+		for (tproj in proj.list) { #cycle through the projections
+			cat('java -mx2048m -cp ',wd,'maxent.jar density.Project ',spp.dir,'output/',SpNo,'.lambdas ',mxe.dir,tproj,' ',spp.dir,'output/ascii/',tproj,'.asc fadebyclamping nowriteclampgrid\n',sep="",file=zz)
+		}
+		cat('java -mx2048m -cp ',wd,'maxent.jar density.Project ',spp.dir,'output/',SpNo,'.lambdas ',current.dir,' ',spp.dir,'output/ascii/1990.asc fadebyclamping nowriteclampgrid\n',sep="",file=zz)
+		cat('gzip ',spp.dir,'output/ascii/*asc\n',sep='',file=zz)
+	close(zz)	
 }
-###do the actual accumulation
-ncore=48 #this number of cores seems most appropriate
-cl <- makeCluster(getOption("cl.cores", ncore))#define the cluster for running the analysis
-	print(system.time({ tout = parLapplyLB(cl,SpNos,model.spp,occur=occur,wd=wd,current.dir=current.dir,mxe.dir=mxe.dir) }))
-stopCluster(cl) #stop the cluster for analysis
+print(system.time({ tout = lapply(SpNos,model.spp,occur=occur,wd=wd,current.dir=current.dir,mxe.dir=mxe.dir) }))
 
-
+###############################################################################
+#now out in bash
+cd /tmp/jc165798/models
+maxjobs=30
+for TFILE in `find . -name *sh`
+do
+	echo $TFILE
+	while [ $# -gt 0 ]; do
+        count=(`jobs -p`)
+        if [ ${#count[@]} -lt $maxjobs ]; then
+            sleep 60 
+        fi
+    done
+	sh $TFILE &
+done
 ### original wy of doing things... 
 # for (SpNo in SpNos) {  cat(SpNo,'\n')#cycle through each of the species numbers
 	# toccur = occur[occur$ClimID==SpNo,] #get the observations for the species
