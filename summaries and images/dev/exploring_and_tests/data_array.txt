@@ -1,0 +1,29 @@
+Array
+(
+    [parent_guid] => urn:lsid:biodiversity.org.au:afd.taxon:c9f8bd3a-acc6-49e5-9933-a26b82bbe1b9
+    [guid] => urn:lsid:biodiversity.org.au:afd.taxon:5669905b-38c4-43c4-aefd-a7d0306f10d3
+    [kingdom] => ANIMALIA
+    [kingdom_guid] => urn:lsid:biodiversity.org.au:afd.taxon:4647863b-760d-4b59-aaa1-502c8cdf8d3c
+    [phylum] => CHORDATA
+    [phylum_guid] => urn:lsid:biodiversity.org.au:afd.taxon:065f1da4-53cd-40b8-a396-80fa5c74dedd
+    [clazz] => REPTILIA
+    [clazz_guid] => urn:lsid:biodiversity.org.au:afd.taxon:682e1228-5b3c-45ff-833b-550efd40c399
+    [orderz] => SQUAMATA
+    [orderz_guid] => urn:lsid:biodiversity.org.au:afd.taxon:ce3a5d30-60ec-4e53-9803-b514b88ddbca
+    [family] => ELAPIDAE
+    [family_guid] => urn:lsid:biodiversity.org.au:afd.taxon:1b7ae409-00e3-4b3b-a589-a016974305af
+    [genus] => Acanthophis
+    [genus_guid] => urn:lsid:biodiversity.org.au:afd.taxon:c9f8bd3a-acc6-49e5-9933-a26b82bbe1b9
+    [species] => Acanthophis antarcticus
+    [species_guid] => urn:lsid:biodiversity.org.au:afd.taxon:5669905b-38c4-43c4-aefd-a7d0306f10d3
+    [url_search] => http://bie.ala.org.au/ws/search.json?q=Acanthophis+antarcticus
+    [url_classification] => http://bie.ala.org.au/ws/species/urn:lsid:biodiversity.org.au:afd.taxon:5669905b-38c4-43c4-aefd-a7d0306f10d3.json
+    [url_species_data] => http://bie.ala.org.au/ws/species/urn:lsid:biodiversity.org.au:afd.taxon:5669905b-38c4-43c4-aefd-a7d0306f10d3.json
+    [common_names] => Array
+        (
+            [Common Death Adder] => Common Death Adder
+            [Eastern Death Adder] => Eastern Death Adder
+            [Southern Death Adder] => Southern Death Adder
+        )
+
+)
