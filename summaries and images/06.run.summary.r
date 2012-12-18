@@ -7,7 +7,7 @@ args=(commandArgs(TRUE)); for(i in 1:length(args)) { eval(parse(text=args[[i]]))
 library(SDMTools); library(maptools) #load the necessary libraries
 
 #define directories
-spp.dir = paste(model.dir,'/',spp,'/',sep=''); setwd(spp.dir) #define the input species data directory
+spp.dir = paste(model.dir,spp,'/',sep=''); setwd(spp.dir) #define the input species data directory
 
 ##----------------------------------------------------------------
 #Bring in all the necessary information
@@ -37,50 +37,48 @@ current=base.asc; current[cbind(pos$row,pos$col)]=pot.mat[,1] #create the curren
 #RCP85
 cois=grep('RCP85', colnames(pot.mat), value=T) #determine columns of interest - RCP85
 
-outquant=t(apply(pot.mat[,cois],1,function(x) { return(quantile(x,0.5,na.rm=TRUE,type=8)) })) #get the 50th percentile
-RCP85.asc=base.asc; RCP85.asc[cbind(pos$row,pos$col)]=outquant #create future median ascii
+outquant=t(apply(pot.mat[,cois],1,function(x) { return(quantile(x,c(0.1,0.5,0.9),na.rm=TRUE,type=8)) })) #get the 50th percentile
+tenth=base.asc; tenth[cbind(pos$row,pos$col)]=outquant[,1] #create future median ascii
+fiftieth=base.asc; fiftieth[cbind(pos$row,pos$col)]=outquant[,2] #create future median ascii
+ninetieth=base.asc; ninetieth[cbind(pos$row,pos$col)]=outquant[,3] #create future median ascii
 
 write.asc.gz(current,paste(spp.dir, spp, '.current',sep='')) #write out the ascii
-write.asc.gz(RCP85.asc,paste(spp.dir, spp, '.RCP85',sep='')) #write out the ascii
+write.asc.gz(fiftieth,paste(spp.dir, spp, '.RCP85',sep='')) #write out the ascii
 
 curpos=cbind(pos,pot.mat[,1]); save(x=curpos, file=paste(spp.dir, 'curpos.Rdata',sep='')) #to be used in images
-futpos=cbind(pos,as.vector(outquant)); save(futpos,file=paste(spp.dir, 'futpos.Rdata',sep='')) #to be used in images
+futpos=cbind(pos,outquant); save(futpos,file=paste(spp.dir, 'futpos.Rdata',sep='')) #to be used in images
 
 ##----------------------------------------------------------------
-#overlay polygons
+#read in polygon
 files=list.files(pattern='tpoly')
 if (length(files)==0){tpolys=NULL
 }else{
 tpolys = readShapePoly('tpoly.shp') }#read in the polygon files
 
-#Generate polygon-based summaries
+#overlay polygon
 if (is.null(tpolys)) { tout=pot.mat[,1]*0
 }else{
 tdata=cbind(pos[,c('lat','lon')],pot.mat[,1]);coordinates(tdata) = ~lon+lat
 tout = overlay(tdata,tpolys);tout[which(is.na(tout))]=0 }
 
-in.poly=pot.mat*tout #make a copy of pot.mat and multiply by ploygon to determine if inside polygon.
+quantiles=cbind(pot.mat[,1],outquant)
+
+in.poly=quantiles*tout #make a copy of pot.mat and multiply by ploygon to determine if inside polygon.
 
 tout2=tout; tout2[which(tout==1)]=2 #set areas outside polygon to 1
 tout2[which(tout2==0)]=1
 tout2[which(tout2==2)]=0
 
-out.poly=pot.mat*tout2 #make a copy of pot.mat and multiply by ploygon to determine if outside polygon.
+out.poly=quantiles*tout2 #make a copy of pot.mat and multiply by ploygon to determine if outside polygon.
 
 ##----------------------------------------------------------------
 #determine areas inside and outside polygons
 
-get.stats=function(v) {
-	outquant=quantile(v,c(0.1,0.25,0.5,0.75,0.9),na.rm=TRUE,type=8)
-	Min=min(v); Mean=mean(v); Max=max(v); SD=sd(v)
-	stats=c(Mean,SD,Min,Max,outquant)
-	return(stats)}
-
 #find and summarise areas and suitability: total; inside polygon, outside polygon
 vois=c('area','suit')
-inputs=c('pot.mat','in.poly','out.poly')
+inputs=c('quantiles','in.poly','out.poly')
 varnames=c('total','in.poly','out.poly')
-statnames=c('current','mean','sd','min','max','10th','25th','50th','75th','90th')
+statnames=c('current','10th','50th','90th')
 
 for (tvar in vois) {
 	full.summary=NULL;i=0
@@ -88,8 +86,7 @@ for (tvar in vois) {
 		tdata=get(input);
 		if (tvar=='area') tdata[which(tdata>0)]=1; 
 		tdata=(tdata*pos$area) #find the areas of each cell above the threshold
-		areas=apply(tdata,2,sum) #get the raw areas for each gcm
-		tsummary=get.stats(areas[-1]); tsummary=c(areas[1],tsummary) #get quantiles of gcms only and add current area back
+		tsummary=apply(tdata,2,sum) #get the raw areas for each gcm
 		tsummary=as.data.frame(t(tsummary)) #turn it into a one line data frame
 		for (ii in 1:ncol(tsummary)){
 			colnames(tsummary)[ii]=paste(varnames[i],statnames[ii],sep='.')} #name the columns appropriately
