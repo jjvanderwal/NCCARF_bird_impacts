@@ -8,8 +8,8 @@ library(SDMTools); library(maptools); library(plotrix) #load the necessary libra
 image.dir = "/home/jc148322/Bird_NARP/images/";dir.create(image.dir)
 states=readShapePoly(paste('/home/jc148322/AP02/climate.summaries/region_layers/Shapefile/STE11aAust.shp',sep=''))
 
-base.asc = read.asc.gz('/home/jc165798/Climate/CIAS/Australia/5km/baseline.76to05/base.asc.gz') #read in the base asc file
-pos = read.csv('/home/jc165798/Climate/CIAS/Australia/5km/baseline.76to05/base.positions.csv',as.is=TRUE) #read in the position files
+base.asc = read.asc.gz(paste('/home/jc165798/Climate/CIAS/Australia/',resolution,'/baseline.76to05/base.asc.gz',sep='')) #read in the base asc file
+pos = read.csv(paste('/home/jc165798/Climate/CIAS/Australia/',resolution,'/baseline.76to05/base.positions.csv',sep=''),as.is=TRUE) #read in the position files
 cellarea = grid.area(base.asc) #get the area of individual cells
 pos$area = cellarea[cbind(pos$row,pos$col)] #append the cell area
 aust.area=sum(pos$area)#area of terrestrial australia
@@ -41,13 +41,13 @@ RCP85.asc=read.asc.gz(paste(spp, '.RCP85.asc.gz',sep=''))
 load('futpos.Rdata')
 load('curpos.Rdata')
 
-min.lat=min(min(curpos$lat[which(curpos[,ncol(curpos)]>0)],na.rm=TRUE),min(futpos$lat[which(futpos[,ncol(futpos)]>0)],na.rm=TRUE))
+min.lat=min(min(curpos$lat[which(curpos[,ncol(curpos)]>0)],na.rm=TRUE),min(futpos$lat[which(futpos[,7]>0)],na.rm=TRUE))
 
-max.lat=max(max(curpos$lat[which(curpos[,ncol(curpos)]>0)],na.rm=TRUE),max(futpos$lat[which(futpos[,ncol(futpos)]>0)],na.rm=TRUE))
+max.lat=max(max(curpos$lat[which(curpos[,ncol(curpos)]>0)],na.rm=TRUE),max(futpos$lat[which(futpos[,7]>0)],na.rm=TRUE))
 
-min.lon=min(min(curpos$lon[which(curpos[,ncol(curpos)]>0)],na.rm=TRUE),min(futpos$lon[which(futpos[,ncol(futpos)]>0)],na.rm=TRUE))
+min.lon=min(min(curpos$lon[which(curpos[,ncol(curpos)]>0)],na.rm=TRUE),min(futpos$lon[which(futpos[,7]>0)],na.rm=TRUE))
 
-max.lon=max(max(curpos$lon[which(curpos[,ncol(curpos)]>0)],na.rm=TRUE),max(futpos$lon[which(futpos[,ncol(futpos)]>0)],na.rm=TRUE))
+max.lon=max(max(curpos$lon[which(curpos[,ncol(curpos)]>0)],na.rm=TRUE),max(futpos$lon[which(futpos[,7]>0)],na.rm=TRUE))
 summary.table=read.csv('area.summary.csv',as.is=TRUE)
 area.total=as.numeric(summary.table[1,1])
 
