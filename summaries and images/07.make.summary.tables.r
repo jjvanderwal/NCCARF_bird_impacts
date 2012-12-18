@@ -3,12 +3,13 @@ library(SDMTools)
 out.dir='/home/jc148322/Bird_NARP/summary.data/'
 wd='/home/jc148322/Bird_NARP/species.outputs/';setwd(wd)
 bird.data=read.csv('/home/jc148322/Bird_NARP/raw.data/ClimModels.csv')#get bird spp
-
+bird.data$ClimName=as.character(bird.data$ClimName)
 species=list.files()
 
 area.summary = suit.summary = bioclim.summary = NULL
 for (spp in species) { cat(spp,'\n'); 
-	common.name=as.character(bird.data$ClimName[which(bird.data$ClimID==spp)])
+	common.name=bird.data$ClimName[which(bird.data$ClimID==spp)]
+	common.name=gsub(',',' -',common.name)
 	area=read.csv(paste(spp,'/area.summary.csv',sep=''),as.is=TRUE)
 	suit=read.csv(paste(spp,'/suit.summary.csv',sep=''),as.is=TRUE)
 	bioclim=read.csv(paste(spp,'/',spp,'.bioclim.csv',sep=''),as.is=TRUE)

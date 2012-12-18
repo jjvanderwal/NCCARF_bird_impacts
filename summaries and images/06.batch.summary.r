@@ -4,10 +4,10 @@
 #alternative resolutions commented out
 ################################################################################
 library(SDMTools)#load the necessary libraries
-model.dir='/home/jc148322/Bird_NARP/models_1km/'; setwd(model.dir) #1km directory
-#model.dir='/home/jc165798/working/NARP_birds/models/'; setwd(model.dir) #5km directory
-resolution='1km' 
-#resolution='5km'
+# model.dir='/home/jc148322/Bird_NARP/models_1km/'; setwd(model.dir) #1km directory
+model.dir='/home/jc165798/working/NARP_birds/models/'; setwd(model.dir) #5km directory
+# resolution='1km' 
+resolution='5km'
 
 species=list.files()
 
@@ -27,6 +27,7 @@ for (spp in species){ cat(spp, '\n')
 	close(zz) 
 
 	##submit the script
-	system(paste('qsub -l nodes=1:ppn=8 06.',spp,'.summary.sh',sep=''))
+	# system(paste('qsub -l nodes=1:ppn=8 06.',spp,'.summary.sh',sep='')) #1km
+	system(paste('qsub -l nodes=1:ppn=2 06.',spp,'.summary.sh',sep='')) #5km
 }
 
