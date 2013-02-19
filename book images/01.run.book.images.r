@@ -78,21 +78,13 @@ if (max.lat>=-18 & min.lat<=-34 |
 	clip=base.asc; clip[cbind(pos$row,pos$col)]=clippos[,6]}
 
 #image parameters
-cex=2
+cex=3
 m=1 #margin
-state.lwd=1
-poly.lwd=2
-if(resolution=='1km'){
-	cex=cex*5
-	m=m*5
-	state.lwd=state.lwd*5
-	poly.lwd=poly.lwd*5
-}
+state.lwd=0.5
+poly.lwd=1
 
-w=dim(base.asc)[1]+dim(base.asc)[1]*0.1
-h=dim(base.asc)[2]+dim(base.asc)[1]*0.3
 	
-png(paste(spp,'.current.png',sep=''),width=w, height=h, units='px', pointsize=20, bg='white')
+tiff(paste(spp,'.current.tiff',sep=''),width=11.6, height=12.11, units='cm', pointsize=5, res=1200, bg='white')
 		
 	mat = matrix(c(2,2,2,3,3,
 					1,1,1,1,1,
@@ -109,8 +101,7 @@ png(paste(spp,'.current.png',sep=''),width=w, height=h, units='px', pointsize=20
 	image(current, ann=FALSE,axes=FALSE,col=cols, zlim=zlim, xlim=xlim,ylim=ylim,xpd=TRUE,add=TRUE)
 	plot(states, lwd=state.lwd, ann=FALSE,axes=FALSE, add=TRUE,border="grey40")
     if (length(tpolys)>0) {plot(tpolys, lwd=poly.lwd, ann=FALSE,axes=FALSE, add=TRUE)}
-	if (resolution=='1km') { mtext('Current Climate Space',  line=10,side=1, cex=0.8*cex)
-	} else { mtext('Current Climate Space', line=1,side=1, cex=0.8*cex)}
+	mtext('Current Climate Space', line=1,side=1, cex=0.8*cex)
 	
 	par(mar=c(0,m,0,m))
 	plot(1:10, axes=FALSE, ann=FALSE,type = "n")
@@ -129,10 +120,8 @@ png(paste(spp,'.current.png',sep=''),width=w, height=h, units='px', pointsize=20
 
 dev.off()
 
-w=dim(base.asc)[1]+dim(base.asc)[1]*0.1
-h=dim(base.asc)[2]+dim(base.asc)[1]*0.1
 
-png(paste(spp,'.2085.png',sep=''),width=w, height=h, units='px', pointsize=20, bg='white')
+tiff(paste(spp,'.2085.tiff',sep=''),width=11.6, height=10, units='cm', pointsize=5, res=1200, bg='white')
 	par(mar=c(m*3,m,m,m))
 
 	image(base.asc, ann=FALSE,axes=FALSE,col='white', zlim=zlim, xlim=xlim,ylim=ylim)
@@ -140,8 +129,7 @@ png(paste(spp,'.2085.png',sep=''),width=w, height=h, units='px', pointsize=20, b
 	image(RCP85.asc, ann=FALSE,axes=FALSE,col=cols, zlim=zlim, xlim=xlim,ylim=ylim,xpd=FALSE,add=TRUE)
     plot(states, lwd=state.lwd, ann=FALSE,axes=FALSE, add=TRUE,border="grey40")
 	if (length(tpolys)>0) {plot(tpolys, lwd=poly.lwd, ann=FALSE,axes=FALSE, add=TRUE)}
-	if (resolution=='1km') { mtext ('Current Emissions Trajectory - 2085', side=1, line=10, cex=0.8*cex)
-	} else { mtext ('Current Emissions Trajectory - 2085', line=1, side=1, cex=0.8*cex) }
+	mtext ('Current Emissions Trajectory - 2085', line=1, side=1, cex=0.8*cex)
 		
 dev.off()
 
